@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bill Split Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-6">
+    <div class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold mb-4">Bill Split Calculator</h1>
+        
+        <div class="space-y-4 mb-4">
+            <div>
+                <label class="block mb-2">Total Bill Amount</label>
+                <input type="number" id="totalBill" placeholder="Enter total bill amount" class="w-full p-2 border rounded">
+            </div>
+            <div>
+                <label class="block mb-2">Service Charge Amount</label>
+                <input type="number" id="serviceCharge" placeholder="Enter service charge" class="w-full p-2 border rounded">
+            </div>
+            <div>
+                <label class="block mb-2">Tax Rate (%)</label>
+                <input type="number" id="taxRate" value="10" min="0" class="w-full p-2 border rounded">
+            </div>
+            <div id="personOrders"></div>
+            <div class="flex space-x-2">
+                <button onclick="addPersonOrder()" class="bg-blue-500 text-white p-2 rounded flex-grow">Add Person Order</button>
+                <button onclick="removeLastPersonOrder()" class="bg-red-500 text-white p-2 rounded flex-grow">Remove Last Order</button>
+                <button onclick="calculateBill()" class="bg-green-500 text-white p-2 rounded flex-grow">Calculate Bill</button>
+            </div>
+        </div>
+
+        <div id="results" class="space-y-4"></div>
+    </div>
+    <script>
+        function addPersonOrder() {
+            const container = document.getElementById('personOrders');
+            const personIndex = container.children.length + 1;
+            
+            const personDiv = document.createElement('div');
+            personDiv.className = 'mb-4 p-3 border rounded';
+            personDiv.innerHTML = `
+                <label class="block mb-2">Person ${personIndex} Order</label>
+                <input type="text" placeholder="Name" class="w-full p-2 border rounded mb-2 person-name">
+                <input type="number" placeholder="Order Amount" min="0" class="w-full p-2 border rounded person-amount">
+            `;
+            
+            container.appendChild(personDiv);
+        }
+
+        function removeLastPersonOrder() {
+            const container = document.getElementById('personOrders');
+            if (container.children.length > 0) {
+                container.removeChild(container.lastChild);
+            }
+        }
+
+        // Initialize with 3 person orders
+        for (let i = 0; i < 3; i++) {
+            addPersonOrder();
+        }
+
+        function calculateBill() {
+            const resultsDiv = document.getElementById('results');
+            const personOrders = document.querySelectorAll('#personOrders > div');
+            const totalBill = parseFloat(document.getElementById('totalBill').value) || 0;
+            const serviceCharge = parseFloat(document.getElementById('serviceCharge').value) || 0;
+            const taxRate = parseFloat(document.getElementById('taxRate').value) / 100;
+
+            const orders = Array.from(personOrders).map(personDiv => ({
+                person: personDiv.querySelector('.person-name').value || `Person ${personDiv.dataset.index}`,
+                amount: parseFloat(personDiv.querySelector('.person-amount').value) || 0
+            }));
+
+            const subtotal = orders.reduce((sum, order) => sum + order.amount, 0);
+
+            const splitDetails = orders.map(order => {
+                const personServiceCharge = (order.amount / subtotal) * serviceCharge;
+                const personTax = (order.amount + personServiceCharge) * taxRate;
+
+                return {
+                    person: order.person,
+                    originalAmount: order.amount,
+                    serviceCharge: personServiceCharge,
+                    tax: personTax,
+                    total: order.amount + personServiceCharge + personTax
+                };
+            });
+
+            resultsDiv.innerHTML = `
+                <div class="bg-blue-50 p-4 rounded">
+                    <h2 class="font-bold mb-2">Bill Breakdown</h2>
+                    ${splitDetails.map(detail => `
+                        <div class="mb-2">
+                            <p><strong>${detail.person}'s Bill:</strong></p>
+                            <p>Food: IDR ${detail.originalAmount.toLocaleString()}</p>
+                            <p>Service Charge: IDR ${detail.serviceCharge.toLocaleString()}</p>
+                            <p>Tax: IDR ${detail.tax.toLocaleString()}</p>
+                            <p class="font-bold">Total: IDR ${detail.total.toLocaleString()}</p>
+                        </div>
+                    `).join('')}
+                    <div class="mt-4 border-t pt-2">
+                        <p><strong>Totals:</strong></p>
+                        <p>Subtotal: IDR ${subtotal.toLocaleString()}</p>
+                        <p>Service Charge: IDR ${serviceCharge.toLocaleString()}</p>
+                        <p>Total Tax: IDR ${splitDetails.reduce((sum, detail) => sum + detail.tax, 0).toLocaleString()}</p>
+                        <p class="font-bold">Grand Total: IDR ${(subtotal + serviceCharge + splitDetails.reduce((sum, detail) => sum + detail.tax, 0)).toLocaleString()}</p>
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
